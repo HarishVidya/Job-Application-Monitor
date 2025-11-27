@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 import pickle
 import base64
 from typing import Optional
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -224,6 +225,104 @@ Provide your analysis:""",
             print("Sheet initialized with headers")
         except Exception as e:
             print(f"Note: {e}")
+            
+    def send_discord_notification(self, job_applications: list[JobApplicationEmail]):
+        """Send Discord notification with job application findings"""
+        if not self.discord_webhook_url or not job_applications:
+            return
+        
+        try:
+            # Create embed for Discord
+            if len(job_applications) == 1:
+                title = "🎯 Found 1 New Job Application Email!"
+                color = 3447003  # Blue
+            else:
+                title = f"🎯 Found {len(job_applications)} New Job Application Emails!"
+                color = 3066993  # Green
+            
+            # Build description with job details
+            description = ""
+            for i, job in enumerate(job_applications, 1):
+                description += f"\n**{i}. {job.company or 'Unknown Company'}**\n"
+                if job.role:
+                    description += f"📋 Role: {job.role}\n"
+                if job.status:
+                    description += f"📊 Status: {job.status}\n"
+                description += f"📅 Received: {job.date_received}\n"
+            
+            # Create Discord embed
+            embed = {
+                "title": title,
+                "description": description,
+                "color": color,
+                "timestamp": datetime.utcnow().isoformat(),
+                "footer": {
+                    "text": "Job Application Tracker"
+                }
+            }
+            
+            # Send to Discord
+            payload = {
+                "embeds": [embed]
+            }
+            
+            response = requests.post(self.discord_webhook_url, json=payload)
+            
+            if response.status_code == 204:
+                print("✅ Discord notification sent successfully!")
+            else:
+                print(f"⚠️ Discord notification failed: {response.status_code}")
+                
+        except Exception as e:
+            print(f"Error sending Discord notification: {e}")
+    
+    def send_discord_summary(self, total_checked: int, jobs_found: int):
+        """Send summary notification to Discord"""
+        if not self.discord_webhook_url:
+            return
+        
+        try:
+            if jobs_found == 0:
+                title = "✅ Monitoring Complete"
+                description = f"Checked {total_checked} emails - No new job applications found."
+                color = 10070709  # Gray
+            else:
+                title = "✅ Monitoring Complete"
+                description = f"Checked {total_checked} emails and logged {jobs_found} job application(s) to Google Sheets!"
+                color = 5763719  # Green
+            
+            embed = {
+                "title": title,
+                "description": description,
+                "color": color,
+                "timestamp": datetime.utcnow().isoformat(),
+                "footer": {
+                    "text": "Job Application Tracker"
+                }
+            }
+            
+            payload = {"embeds": [embed]}
+            requests.post(self.discord_webhook_url, json=payload)
+            
+        except Exception as e:
+            print(f"Error sending Discord summary: {e}")
+        """Initialize sheet with headers if needed"""
+        try:
+            # Add headers
+            values = [['Company', 'Role', 'Date Received', 'Status', 'Logged At']]
+            body = {'values': values}
+            
+            self.sheets_service.spreadsheets().values().update(
+                spreadsheetId=self.spreadsheet_id,
+                range='Sheet1!A1:E1',
+                valueInputOption='RAW',
+                body=body
+            ).execute()
+            
+            print("Sheet initialized with headers")
+        except Exception as e:
+            print(f"Note: {e}")
+    
     
     def run_monitor(self, max_emails=10):
         """Main monitoring function"""
