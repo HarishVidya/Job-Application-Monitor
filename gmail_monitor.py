@@ -31,7 +31,7 @@ class JobApplicationEmail(BaseModel):
     status: Optional[str] = Field(description="Status like 'received', 'interview', 'rejected', etc.")
 
 class GmailJobMonitor:
-    def __init__(self, gemini_api_key: str, spreadsheet_id: str):
+    def __init__(self, gemini_api_key: str, spreadsheet_id: str, discord_webhook_url: str = None):
         """
         Initialize the Gmail Job Monitor
         
@@ -41,6 +41,7 @@ class GmailJobMonitor:
         """
         self.gemini_api_key = gemini_api_key
         self.spreadsheet_id = spreadsheet_id
+        self.discord_webhook_url = discord_webhook_url
         self.gmail_service = None
         self.sheets_service = None
         self.llm = None
@@ -359,16 +360,20 @@ def main():
     # Configuration
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")  # Replace with your API key
     SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")  # Replace with your Sheet ID
+    DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
     
     if not GEMINI_API_KEY:
         raise ValueError("GEMINI_API_KEY environment variable not set")
     if not SPREADSHEET_ID:
         raise ValueError("SPREADSHEET_ID environment variable not set")
+    if not DISCORD_WEBHOOK_URL:
+        raise ValueError("Discord environment variable not set")
     
     # Create monitor instance
     monitor = GmailJobMonitor(
         gemini_api_key=GEMINI_API_KEY,
-        spreadsheet_id=SPREADSHEET_ID
+        spreadsheet_id=SPREADSHEET_ID,
+        discord_webhook_url=DISCORD_WEBHOOK_URL
     )
     
     # Initialize sheet with headers (run once)
