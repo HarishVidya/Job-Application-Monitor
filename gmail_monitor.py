@@ -351,7 +351,8 @@ Provide your analysis:""",
                 if analysis and analysis.is_job_application:
                     job_count += 1
                     self.log_to_sheets(analysis)
-        
+                    
+        self.send_discord_summary(max_emails, job_count)
         print(f"\n✅ Monitoring complete! Found {job_count} job-related emails.")
 
 
